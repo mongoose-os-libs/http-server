@@ -5,6 +5,10 @@
 
 #include "mgos_http_server.h"
 
+#if defined(MGOS_HAVE_ATCA)
+#include "mgos_atca.h"
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +17,6 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
-#include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_config.h"
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_debug_hal.h"
@@ -242,7 +245,7 @@ bool mgos_http_server_init(void) {
  * ESP8266 cannot handle DH of any kind, unless there's hardware acceleration,
  * it's too slow.
  */
-#if MGOS_ENABLE_ATCA
+#if defined(MGOS_HAVE_ATCA)
   if (mbedtls_atca_is_available()) {
     opts.ssl_cipher_suites =
         "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:"
@@ -257,7 +260,7 @@ bool mgos_http_server_init(void) {
         "TLS-RSA-WITH-AES-128-CBC-SHA256:"
         "TLS-RSA-WITH-AES-128-CBC-SHA";
   } else
-#endif /* MGOS_ENABLE_ATCA */
+#endif /* defined(MGOS_HAVE_ATCA) */
     opts.ssl_cipher_suites =
         "TLS-RSA-WITH-AES-128-GCM-SHA256:"
         "TLS-RSA-WITH-AES-128-CBC-SHA256:"

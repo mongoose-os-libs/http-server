@@ -22,6 +22,10 @@ cdefs:
   MGOS_ENABLE_FILE_UPLOAD: 1
   MGOS_ENABLE_TUNNEL: 0
 
+libs:
+  - origin: https://github.com/mongoose-os-libs/atca
+    weak: true
+
 tags:
   - http
   - c
