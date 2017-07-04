@@ -12,6 +12,10 @@
 #include "fw/src/mgos_init.h"
 #include "common/cs_dbg.h"
 
+#if defined(__cplusplus)
+	extern "C" {                 // Make sure we have C-declarations in C++ programs
+#endif
+
 bool mgos_http_server_init(void);
 
 struct mg_connection *mgos_get_sys_http_server(void);
@@ -22,5 +26,8 @@ void mgos_register_http_endpoint(const char *uri_path,
 void mgos_register_http_endpoint_opt(const char *uri_path,
                                      mg_event_handler_t handler,
                                      struct mg_http_endpoint_opts opts);
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* CS_MOS_LIBS_HTTP_SERVER_SRC_MGOS_HTTP_SERVER_H_ */
