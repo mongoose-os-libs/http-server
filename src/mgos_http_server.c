@@ -23,10 +23,10 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_net.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_common.h"
 #include "fw/src/mgos_utils.h"
-#include "fw/src/mgos_wifi.h"
 
 #define MGOS_F_RELOAD_CONFIG MG_F_USER_5
 
@@ -154,15 +154,16 @@ static void upload_handler(struct mg_connection *c, int ev, void *p,
 }
 #endif
 
-#if MGOS_ENABLE_WIFI && MGOS_ENABLE_TUNNEL
-static void on_wifi_ready(enum mgos_wifi_status event, void *arg) {
+#if MGOS_ENABLE_TUNNEL
+static void on_net_ready(enum mgos_net_event ev,
+                         const struct mgos_net_event_data *ev_data, void *arg) {
   if (s_listen_conn_tun != NULL) {
     /* Depending on the WiFi status, allow or disallow tunnel reconnection */
-    switch (event) {
-      case MGOS_WIFI_DISCONNECTED:
+    switch (ev) {
+      case MGOS_NET_EV_DISCONNECTED:
         s_listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
         break;
-      case MGOS_WIFI_IP_ACQUIRED:
+      case MGOS_NET_EV_IP_ACQUIRED:
         s_listen_conn_tun->flags &= ~MG_F_TUN_DO_NOT_RECONNECT;
         break;
       default:
@@ -172,7 +173,7 @@ static void on_wifi_ready(enum mgos_wifi_status event, void *arg) {
 
   (void) arg;
 }
-#endif /* MGOS_ENABLE_WIFI */
+#endif /* MGOS_ENABLE_TUNNEL */
 
 static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
                          void *user_data) {
@@ -305,15 +306,13 @@ bool mgos_http_server_init(void) {
       LOG(LL_ERROR, ("Error binding to [%s]", tun_addr));
       return false;
     } else {
-#if MGOS_ENABLE_WIFI
       /*
-       * Wifi is not yet ready, so we need to set a flag which prevents the
+       * Network is not yet ready, so we need to set a flag which prevents the
        * tunnel from reconnecting. The flag will be cleared when wifi connection
        * is ready.
        */
       s_listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
-      mgos_wifi_add_on_change_cb(on_wifi_ready, NULL);
-#endif
+      mgos_net_add_event_handler(on_net_ready, NULL);
     }
 
     mg_set_protocol_http_websocket(s_listen_conn_tun);
