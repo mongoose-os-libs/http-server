@@ -9,7 +9,7 @@
 #include <stdbool.h>
 
 #include "sys_config.h"
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 #include "common/cs_dbg.h"
 
 #if defined(__cplusplus)
