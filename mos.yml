@@ -25,6 +25,10 @@ cdefs:
 libs:
   - origin: https://github.com/mongoose-os-libs/atca
     weak: true
+  - origin: https://github.com/mongoose-os-libs/ethernet
+    weak: true
+  - origin: https://github.com/mongoose-os-libs/wifi
+    weak: true
 
 tags:
   - http
