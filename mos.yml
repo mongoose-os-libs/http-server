@@ -9,6 +9,7 @@ config_schema:
   - ["http", "o", {title: "HTTP Server"}]
   - ["http.enable", "b", true, {title: "Enable HTTP Server"}]
   - ["http.listen_addr", "s", "80", {title: "Listening port / address"}]
+  - ["http.document_root", "s", "/", {title: "Root for serving files. Setting to empty disables file serving."}]
   - ["http.ssl_cert", "s", {title: "Turn on SSL on the listener, use this cert"}]
   - ["http.ssl_key", "s", {title: "SSL key to use"}]
   - ["http.ssl_ca_cert", "s", {title: "Verify clients this CA bundle"}]

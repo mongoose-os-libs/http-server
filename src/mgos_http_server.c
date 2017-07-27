@@ -187,18 +187,17 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
     }
     case MG_EV_HTTP_REQUEST: {
 #if MG_ENABLE_FILESYSTEM
-      struct http_message *hm = (struct http_message *) p;
-      LOG(LL_INFO, ("%p %.*s %.*s", c, (int) hm->method.len, hm->method.p,
-                    (int) hm->uri.len, hm->uri.p));
+      if (s_http_server_opts.document_root != NULL) {
+        struct http_message *hm = (struct http_message *) p;
+        LOG(LL_INFO, ("%p %.*s %.*s", c, (int) hm->method.len, hm->method.p,
+                      (int) hm->uri.len, hm->uri.p));
 
-      mg_serve_http(c, p, s_http_server_opts);
-/*
- * NOTE: `mg_serve_http()` manages closing connection when appropriate,
- * so, we should not set `MG_F_SEND_AND_CLOSE` here
- */
-#else
-      mg_http_send_error(c, 404, "Not Found");
+        mg_serve_http(c, p, s_http_server_opts);
+      } else
 #endif
+      {
+        mg_http_send_error(c, 404, "Not Found");
+      }
       break;
     }
     case MG_EV_HTTP_MULTIPART_REQUEST: {
@@ -230,6 +229,7 @@ bool mgos_http_server_init(void) {
   }
 
 #if MG_ENABLE_FILESYSTEM
+  s_http_server_opts.document_root = cfg->document_root;
   s_http_server_opts.hidden_file_pattern = cfg->hidden_files;
   s_http_server_opts.auth_domain = cfg->auth_domain;
   s_http_server_opts.global_auth_file = cfg->auth_file;
