@@ -5,6 +5,8 @@ version: 1.0
 manifest_version: 2017-05-18
 sources:
   - src
+includes:
+  - include
 config_schema:
   - ["http", "o", {title: "HTTP Server"}]
   - ["http.enable", "b", true, {title: "Enable HTTP Server"}]
