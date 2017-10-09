@@ -208,7 +208,7 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
       /* If we've sent the reply to the server, and should reboot, reboot */
       if (c->flags & MGOS_F_RELOAD_CONFIG) {
         c->flags &= ~MGOS_F_RELOAD_CONFIG;
-        mgos_system_restart(0);
+        mgos_system_restart();
       }
       break;
     }
