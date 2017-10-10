@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 
-#include "sys_config.h"
+#include "mgos_config.h"
 #include "mgos_init.h"
 #include "common/cs_dbg.h"
 

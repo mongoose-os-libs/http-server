@@ -17,7 +17,7 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
-#include "mgos_config.h"
+#include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_debug_hal.h"
 #include "mgos_hal.h"
@@ -60,21 +60,21 @@ static void conf_handler(struct mg_connection *c, int ev, void *p,
   int status = -1;
   int rc = 200;
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
-    struct sys_config cfg;
+    struct mgos_config cfg;
     if (load_config_defaults(&cfg)) {
-      send_cfg(&cfg, sys_config_schema(), hm, c);
-      mgos_conf_free(sys_config_schema(), &cfg);
+      send_cfg(&cfg, mgos_config_schema(), hm, c);
+      mgos_conf_free(mgos_config_schema(), &cfg);
       status = 0;
     }
   } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
-    send_cfg(get_cfg(), sys_config_schema(), hm, c);
+    send_cfg(&mgos_sys_config, mgos_config_schema(), hm, c);
     status = 0;
   } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
-    struct sys_config tmp;
+    struct mgos_config tmp;
     memset(&tmp, 0, sizeof(tmp));
     if (load_config_defaults(&tmp)) {
       char *acl_copy = (tmp.conf_acl == NULL ? NULL : strdup(tmp.conf_acl));
-      if (mgos_conf_parse(hm->body, acl_copy, sys_config_schema(), &tmp)) {
+      if (mgos_conf_parse(hm->body, acl_copy, mgos_config_schema(), &tmp)) {
         status = (save_cfg(&tmp, &msg) ? 0 : -10);
       } else {
         status = -11;
@@ -83,7 +83,7 @@ static void conf_handler(struct mg_connection *c, int ev, void *p,
     } else {
       status = -10;
     }
-    mgos_conf_free(sys_config_schema(), &tmp);
+    mgos_conf_free(mgos_config_schema(), &tmp);
     if (status == 0) c->flags |= MGOS_F_RELOAD_CONFIG;
   } else if (mg_vcmp(&hm->uri, "/conf/reset") == 0) {
     struct stat st;
@@ -131,7 +131,7 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p,
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("RO-vars requested"));
   struct http_message *hm = (struct http_message *) p;
-  send_cfg(get_ro_vars(), sys_ro_vars_schema(), hm, c);
+  send_cfg(&mgos_sys_ro_vars, mgos_ro_vars_schema(), hm, c);
   c->flags |= MG_F_SEND_AND_CLOSE;
   (void) user_data;
 }
@@ -142,7 +142,7 @@ static struct mg_str upload_fname(struct mg_connection *nc,
                                   struct mg_str fname) {
   struct mg_str res = {NULL, 0};
   (void) nc;
-  if (mgos_conf_check_access(fname, get_cfg()->http.upload_acl)) {
+  if (mgos_conf_check_access(fname, mgos_sys_config_get_http_upload_acl())) {
     res = fname;
   }
   return res;
@@ -217,30 +217,29 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
 }
 
 bool mgos_http_server_init(void) {
-  const struct sys_config_http *cfg = &get_cfg()->http;
-
-  if (!cfg->enable) {
+  if (!mgos_sys_config_get_http_enable()) {
     return true;
   }
 
-  if (cfg->listen_addr == NULL) {
+  if (mgos_sys_config_get_http_listen_addr() == NULL) {
     LOG(LL_WARN, ("HTTP Server disabled, listening address is empty"));
     return true; /* At this moment it is just warning */
   }
 
 #if MG_ENABLE_FILESYSTEM
-  s_http_server_opts.document_root = cfg->document_root;
-  s_http_server_opts.hidden_file_pattern = cfg->hidden_files;
-  s_http_server_opts.auth_domain = cfg->auth_domain;
-  s_http_server_opts.global_auth_file = cfg->auth_file;
+  s_http_server_opts.document_root = mgos_sys_config_get_http_document_root();
+  s_http_server_opts.hidden_file_pattern =
+      mgos_sys_config_get_http_hidden_files();
+  s_http_server_opts.auth_domain = mgos_sys_config_get_http_auth_domain();
+  s_http_server_opts.global_auth_file = mgos_sys_config_get_http_auth_file();
 #endif
 
   struct mg_bind_opts opts;
   memset(&opts, 0, sizeof(opts));
 #if MG_ENABLE_SSL
-  opts.ssl_cert = cfg->ssl_cert;
-  opts.ssl_key = cfg->ssl_key;
-  opts.ssl_ca_cert = cfg->ssl_ca_cert;
+  opts.ssl_cert = mgos_sys_config_get_http_ssl_cert();
+  opts.ssl_key = mgos_sys_config_get_http_ssl_key();
+  opts.ssl_ca_cert = mgos_sys_config_get_http_ssl_ca_cert();
 #if CS_PLATFORM == CS_P_ESP8266
 /*
  * ESP8266 cannot handle DH of any kind, unless there's hardware acceleration,
@@ -269,34 +268,39 @@ bool mgos_http_server_init(void) {
 #endif /* CS_PLATFORM == CS_P_ESP8266 */
 #endif /* MG_ENABLE_SSL */
   s_listen_conn =
-      mg_bind_opt(mgos_get_mgr(), cfg->listen_addr, mgos_http_ev, NULL, opts);
+      mg_bind_opt(mgos_get_mgr(), mgos_sys_config_get_http_listen_addr(),
+                  mgos_http_ev, NULL, opts);
 
   if (!s_listen_conn) {
-    LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
+    LOG(LL_ERROR,
+        ("Error binding to [%s]", mgos_sys_config_get_http_listen_addr()));
     return false;
   }
 
   mg_set_protocol_http_websocket(s_listen_conn);
-  LOG(LL_INFO, ("HTTP server started on [%s]%s", cfg->listen_addr,
+  LOG(LL_INFO,
+      ("HTTP server started on [%s]%s", mgos_sys_config_get_http_listen_addr(),
 #if MG_ENABLE_SSL
-                (opts.ssl_cert ? " (SSL)" : "")
+       (opts.ssl_cert ? " (SSL)" : "")
 #else
-                ""
+       ""
 #endif
-                    ));
+           ));
 
 #if MGOS_ENABLE_TUNNEL
-  const struct sys_config_device *device_cfg = &get_cfg()->device;
-  if (cfg->tunnel.enable && device_cfg->id != NULL &&
-      device_cfg->password != NULL) {
+  if (mgos_sys_config_get_http_tunnel_enable() &&
+      mgos_sys_config_get_device_id() != NULL &&
+      mgos_sys_config_get_device_password() != NULL) {
     char *tun_addr = NULL;
     /*
      * NOTE: we won't free `tun_addr`, because when reconnect happens, this
      * address string will be accessed again.
      */
-    if (mg_asprintf(&tun_addr, 0, "ws://%s:%s@%s.%s", device_cfg->id,
-                    device_cfg->password, device_cfg->id,
-                    cfg->tunnel.addr) < 0) {
+    if (mg_asprintf(&tun_addr, 0, "ws://%s:%s@%s.%s",
+                    mgos_sys_config_get_device_id(),
+                    mgos_sys_config_get_device_password(),
+                    mgos_sys_config_get_device_id(),
+                    mgos_sys_config_get_http_tunnel_addr()) < 0) {
       return false;
     }
     s_listen_conn_tun =
@@ -354,8 +358,8 @@ void mgos_register_http_endpoint(const char *uri_path,
   struct mg_http_endpoint_opts opts;
   memset(&opts, 0, sizeof(opts));
   opts.user_data = user_data;
-  opts.auth_domain = get_cfg()->http.auth_domain;
-  opts.auth_file = get_cfg()->http.auth_file;
+  opts.auth_domain = mgos_sys_config_get_http_auth_domain();
+  opts.auth_file = mgos_sys_config_get_http_auth_file();
   mgos_register_http_endpoint_opt(uri_path, handler, opts);
 }
 
