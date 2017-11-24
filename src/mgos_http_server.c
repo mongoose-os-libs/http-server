@@ -366,3 +366,7 @@ void mgos_register_http_endpoint(const char *uri_path,
 struct mg_connection *mgos_get_sys_http_server(void) {
   return s_listen_conn;
 }
+
+void mgos_http_server_set_document_root(const char *document_root) {
+  s_http_server_opts.document_root = document_root;
+}

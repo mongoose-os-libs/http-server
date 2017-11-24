@@ -26,6 +26,13 @@ void mgos_register_http_endpoint(const char *uri_path,
 void mgos_register_http_endpoint_opt(const char *uri_path,
                                      mg_event_handler_t handler,
                                      struct mg_http_endpoint_opts opts);
+
+/*
+ * Set document root to serve static content from. Setting it to NULL disables
+ * static server (404 will be returned).
+ */
+void mgos_http_server_set_document_root(const char *document_root);
+
 #if defined(__cplusplus)
 }
 #endif
