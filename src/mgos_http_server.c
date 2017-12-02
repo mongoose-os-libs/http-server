@@ -277,6 +277,8 @@ bool mgos_http_server_init(void) {
     return false;
   }
 
+  s_listen_conn->recv_mbuf_limit = MGOS_RECV_MBUF_LIMIT;
+
   mg_set_protocol_http_websocket(s_listen_conn);
   LOG(LL_INFO,
       ("HTTP server started on [%s]%s", mgos_sys_config_get_http_listen_addr(),
