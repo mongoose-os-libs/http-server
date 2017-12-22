@@ -155,8 +155,7 @@ static void upload_handler(struct mg_connection *c, int ev, void *p,
 #endif
 
 #if MGOS_ENABLE_TUNNEL
-static void on_net_ready(enum mgos_net_event ev,
-                         const struct mgos_net_event_data *ev_data, void *arg) {
+static void on_net_ready(int ev, void *evd, void *arg) {
   if (s_listen_conn_tun != NULL) {
     /* Depending on the WiFi status, allow or disallow tunnel reconnection */
     switch (ev) {
@@ -318,7 +317,7 @@ bool mgos_http_server_init(void) {
        * is ready.
        */
       s_listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
-      mgos_net_add_event_handler(on_net_ready, NULL);
+      mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, on_net_ready, NULL);
     }
 
     mg_set_protocol_http_websocket(s_listen_conn_tun);
