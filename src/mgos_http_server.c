@@ -192,6 +192,7 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
                       (int) hm->uri.len, hm->uri.p));
 
         mg_serve_http(c, p, s_http_server_opts);
+        (void) hm;
       } else
 #endif
       {
