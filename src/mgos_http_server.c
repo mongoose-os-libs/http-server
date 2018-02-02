@@ -5,18 +5,19 @@
 
 #include "mgos_http_server.h"
 
-#if defined(MGOS_HAVE_ATCA)
-#include "mgos_atca.h"
-#endif
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "common/cs_dbg.h"
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
+
+#if defined(MGOS_HAVE_ATCA)
+#include "mgos_atca.h"
+#endif
 #include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_debug_hal.h"
