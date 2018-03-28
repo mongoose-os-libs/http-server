@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #if defined(__cplusplus)
 extern "C" {  // Make sure we have C-declarations in C++ programs
