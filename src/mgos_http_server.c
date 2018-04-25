@@ -49,6 +49,8 @@ static struct mg_serve_http_opts s_http_server_opts;
 static struct mg_connection *s_listen_conn;
 static struct mg_connection *s_listen_conn_tun;
 
+static mgos_ep_controller_event_handler ep_controller_cb=NULL;
+
 #if MGOS_ENABLE_WEB_CONFIG
 
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
@@ -226,6 +228,9 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
       break;
     }
   }
+  if( ep_controller_cb != NULL ){
+    ep_controller_cb(c,ev,p,user_data);
+  }
   (void) user_data;
 }
 
@@ -384,4 +389,8 @@ struct mg_connection *mgos_get_sys_http_server(void) {
 
 void mgos_http_server_set_document_root(const char *document_root) {
   s_http_server_opts.document_root = document_root;
+}
+
+void mgos_register_ep_controller_event_handler(mgos_ep_controller_event_handler cb){
+  ep_controller_cb = cb;
 }

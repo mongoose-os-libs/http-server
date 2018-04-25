@@ -69,6 +69,9 @@ void mgos_register_http_endpoint_opt(const char *uri_path,
  */
 void mgos_http_server_set_document_root(const char *document_root);
 
+typedef void (*mgos_ep_controller_event_handler)(struct mg_connection *c, int ev, void *p,void *user_data);
+void mgos_register_ep_controller_event_handler(mgos_ep_controller_event_handler cb);
+
 #if defined(__cplusplus)
 }
 #endif
