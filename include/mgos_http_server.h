@@ -68,6 +68,11 @@ void mgos_register_http_endpoint_opt(const char *uri_path,
  * static server (404 will be returned).
  */
 void mgos_http_server_set_document_root(const char *document_root);
+  
+/*
+ * Set extra headres to serve. (e.g cors heeaders)
+ */
+void mgos_http_server_set_extra_headers(const char *extra_headers);
 
 #if defined(__cplusplus)
 }
