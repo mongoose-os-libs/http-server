@@ -38,7 +38,6 @@
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
 #include "mgos_sys_config.h"
-#include "mgos_updater_common.h"
 #include "mgos_utils.h"
 
 #define MGOS_F_RELOAD_CONFIG MG_F_USER_5
