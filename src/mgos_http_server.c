@@ -166,26 +166,6 @@ static void upload_handler(struct mg_connection *c, int ev, void *p,
 }
 #endif
 
-#if MGOS_ENABLE_TUNNEL
-static void on_net_ready(int ev, void *evd, void *arg) {
-  if (s_listen_conn_tun != NULL) {
-    /* Depending on the WiFi status, allow or disallow tunnel reconnection */
-    switch (ev) {
-      case MGOS_NET_EV_DISCONNECTED:
-        s_listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
-        break;
-      case MGOS_NET_EV_IP_ACQUIRED:
-        s_listen_conn_tun->flags &= ~MG_F_TUN_DO_NOT_RECONNECT;
-        break;
-      default:
-        break;
-    }
-  }
-
-  (void) arg;
-}
-#endif /* MGOS_ENABLE_TUNNEL */
-
 static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
                          void *user_data) {
   switch (ev) {
@@ -300,49 +280,6 @@ bool mgos_http_server_init(void) {
        ""
 #endif
            ));
-
-#if MGOS_ENABLE_TUNNEL
-  if (mgos_sys_config_get_http_tunnel_enable() &&
-      mgos_sys_config_get_device_id() != NULL &&
-      mgos_sys_config_get_device_password() != NULL) {
-    char *tun_addr = NULL;
-    /*
-     * NOTE: we won't free `tun_addr`, because when reconnect happens, this
-     * address string will be accessed again.
-     */
-    if (mg_asprintf(&tun_addr, 0, "ws://%s:%s@%s.%s",
-                    mgos_sys_config_get_device_id(),
-                    mgos_sys_config_get_device_password(),
-                    mgos_sys_config_get_device_id(),
-                    mgos_sys_config_get_http_tunnel_addr()) < 0) {
-      return false;
-    }
-    s_listen_conn_tun =
-        mg_bind_opt(mgos_get_mgr(), tun_addr, mgos_http_ev, opts);
-
-    if (s_listen_conn_tun == NULL) {
-      LOG(LL_ERROR, ("Error binding to [%s]", tun_addr));
-      return false;
-    } else {
-      /*
-       * Network is not yet ready, so we need to set a flag which prevents the
-       * tunnel from reconnecting. The flag will be cleared when wifi connection
-       * is ready.
-       */
-      s_listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
-      mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, on_net_ready, NULL);
-    }
-
-    mg_set_protocol_http_websocket(s_listen_conn_tun);
-    LOG(LL_INFO, ("Tunneled HTTP server started on [%s]%s", tun_addr,
-#if MG_ENABLE_SSL
-                  (opts.ssl_cert ? " (SSL)" : "")
-#else
-                  ""
-#endif
-                      ));
-  }
-#endif
 
 #if MGOS_ENABLE_WEB_CONFIG
   mgos_register_http_endpoint("/conf/", conf_handler, NULL);
