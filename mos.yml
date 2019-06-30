@@ -35,6 +35,9 @@ tags:
   - net
   - docs:net:HTTP server
 
-# Temporary, while root manifest change propagates (2018/03/29).
-libs:
-  - origin: https://github.com/mongoose-os-libs/core
+conds:
+  - when: mos.platform == "ubuntu"
+    apply:
+      config_schema:
+        # Binding to higher ports requires elevated privileges.
+        - ["http.listen_addr", "8080"]
