@@ -37,12 +37,9 @@
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
+#include "mgos_ro_vars.h"
 #include "mgos_sys_config.h"
 #include "mgos_utils.h"
-
-#if MGOS_ENABLE_WEB_CONFIG
-#include "mgos_ro_vars.h"
-#endif
 
 #define MGOS_F_RELOAD_CONFIG MG_F_USER_5
 
