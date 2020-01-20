@@ -33,10 +33,14 @@
 #include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_debug_hal.h"
+#ifdef MGOS_HAVE_DNS_SD
+#include "mgos_dns_sd.h"
+#endif
 #include "mgos_hal.h"
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
+#include "mgos_ro_vars.h"
 #include "mgos_sys_config.h"
 #include "mgos_utils.h"
 
@@ -208,6 +212,62 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
   (void) user_data;
 }
 
+#ifdef MGOS_HAVE_DNS_SD
+static void mgos_http_server_publish(void *arg) {
+  int n = 0;
+  struct mgos_dns_sd_txt_entry *txt = NULL;
+#if !MGOS_DNS_SD_HIDE_ADDITIONAL_INFO
+  const struct mgos_dns_sd_txt_entry txt_id = {
+      .key = "id",
+      .value = mg_mk_str(mgos_sys_config_get_device_id()),
+  };
+  const struct mgos_dns_sd_txt_entry txt_fw_id = {
+      .key = "fw_id",
+      .value = mg_mk_str(mgos_sys_ro_vars_get_fw_id()),
+  };
+  const struct mgos_dns_sd_txt_entry txt_arch = {
+      .key = "arch",
+      .value = mg_mk_str(mgos_sys_ro_vars_get_arch()),
+  };
+  txt = realloc(txt, (n + 4) * sizeof(*txt));
+  if (txt == NULL) return;
+  txt[0] = txt_id;
+  txt[1] = txt_fw_id;
+  txt[2] = txt_arch;
+  n += 3;
+#endif
+  // Append extra labels from config.
+  char *extra_txt = NULL;
+  if (mgos_sys_config_get_dns_sd_txt() != NULL) {
+    extra_txt = strdup(mgos_sys_config_get_dns_sd_txt());
+    const char *p = extra_txt;
+    struct mg_str key, val;
+    while ((p = mg_next_comma_list_entry(p, &key, &val)) != NULL) {
+      ((char *) key.p)[key.len] = '\0';
+      ((char *) val.p)[val.len] = '\0';
+      txt = realloc(txt, (n + 2) * sizeof(*txt));
+      if (txt == NULL) return;
+      txt[n].key = key.p;
+      txt[n].value = val;
+      n++;
+    }
+  }
+  if (txt != NULL) txt[n].key = NULL;
+  // Use instance = host name.
+  const char *host_name = mgos_dns_sd_get_host_name();
+  if (host_name != NULL) {
+    const char *p = strchr(host_name, '.');
+    struct mg_str name = mg_strdup_nul(mg_mk_str_n(host_name, p - host_name));
+    mgos_dns_sd_add_service_instance(
+        name.p, "_http._tcp", ntohs(s_listen_conn->sa.sin.sin_port), txt);
+    mg_strfree(&name);
+  }
+  free(extra_txt);
+  free(txt);
+  (void) arg;
+}
+#endif /* MGOS_HAVE_DNS_SD */
+
 bool mgos_http_server_init(void) {
   if (!mgos_sys_config_get_http_enable()) {
     return true;
@@ -288,6 +348,12 @@ bool mgos_http_server_init(void) {
 #endif
 #if MGOS_ENABLE_FILE_UPLOAD
   mgos_register_http_endpoint("/upload", upload_handler, NULL);
+#endif
+
+#ifdef MGOS_HAVE_DNS_SD
+  if (mgos_sys_config_get_dns_sd_enable()) {
+    mgos_invoke_cb(mgos_http_server_publish, NULL, false /* from_isr */);
+  }
 #endif
 
   return true;
