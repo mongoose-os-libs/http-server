@@ -280,6 +280,7 @@ bool mgos_http_server_init(void) {
 
 #if MG_ENABLE_FILESYSTEM
   s_http_server_opts.document_root = mgos_sys_config_get_http_document_root();
+  s_http_server_opts.index_files = mgos_sys_config_get_http_index_files();
   s_http_server_opts.hidden_file_pattern =
       mgos_sys_config_get_http_hidden_files();
   s_http_server_opts.auth_domain = mgos_sys_config_get_http_auth_domain();
