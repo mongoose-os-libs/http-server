@@ -69,6 +69,11 @@ void mgos_register_http_endpoint_opt(const char *uri_path,
  */
 void mgos_http_server_set_document_root(const char *document_root);
 
+#ifdef MGOS_HAVE_DNS_SD
+/* (Re) publish server DNS-SD instance. */
+void mgos_http_server_publish_dns_sd(void);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

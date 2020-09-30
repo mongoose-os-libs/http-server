@@ -213,7 +213,9 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
 }
 
 #ifdef MGOS_HAVE_DNS_SD
-static void mgos_http_server_publish(void *arg) {
+void mgos_http_server_publish_dns_sd(void) {
+  static char *s_instance = NULL;
+  static uint16_t s_port = 0;
   int n = 0;
   struct mgos_dns_sd_txt_entry *txt = NULL;
 #if !MGOS_DNS_SD_HIDE_ADDITIONAL_INFO
@@ -221,20 +223,29 @@ static void mgos_http_server_publish(void *arg) {
       .key = "id",
       .value = mg_mk_str(mgos_sys_config_get_device_id()),
   };
-  const struct mgos_dns_sd_txt_entry txt_fw_id = {
-      .key = "fw_id",
-      .value = mg_mk_str(mgos_sys_ro_vars_get_fw_id()),
-  };
   const struct mgos_dns_sd_txt_entry txt_arch = {
       .key = "arch",
       .value = mg_mk_str(mgos_sys_ro_vars_get_arch()),
   };
-  txt = realloc(txt, (n + 4) * sizeof(*txt));
+  const struct mgos_dns_sd_txt_entry txt_app = {
+      .key = "app",
+      .value = mg_mk_str(MGOS_APP),
+  };
+  const struct mgos_dns_sd_txt_entry txt_fw_ver = {
+      .key = "fw_version",
+      .value = mg_mk_str(mgos_sys_ro_vars_get_fw_version()),
+  };
+  const struct mgos_dns_sd_txt_entry txt_fw_id = {
+      .key = "fw_id",
+      .value = mg_mk_str(mgos_sys_ro_vars_get_fw_id()),
+  };
+  txt = realloc(txt, (n + 5 + 1) * sizeof(*txt));
   if (txt == NULL) return;
-  txt[0] = txt_id;
-  txt[1] = txt_fw_id;
-  txt[2] = txt_arch;
-  n += 3;
+  txt[n++] = txt_id;
+  txt[n++] = txt_arch;
+  txt[n++] = txt_app;
+  txt[n++] = txt_fw_ver;
+  txt[n++] = txt_fw_id;
 #endif
   // Append extra labels from config.
   char *extra_txt = NULL;
@@ -253,19 +264,32 @@ static void mgos_http_server_publish(void *arg) {
     }
   }
   if (txt != NULL) txt[n].key = NULL;
+  // Remove existing endpoint, if any.
+  if (s_instance != NULL) {
+    mgos_dns_sd_remove_service_instance(s_instance, "_http._tcp", s_port);
+    free(s_instance);
+    s_instance = NULL;
+  }
   // Use instance = host name.
   const char *host_name = mgos_dns_sd_get_host_name();
   if (host_name != NULL) {
     const char *p = strchr(host_name, '.');
     struct mg_str name = mg_strdup_nul(mg_mk_str_n(host_name, p - host_name));
-    mgos_dns_sd_add_service_instance(
-        name.p, "_http._tcp", ntohs(s_listen_conn->sa.sin.sin_port), txt);
-    mg_strfree(&name);
+    s_instance = (char *) name.p;
+    s_port = ntohs(s_listen_conn->sa.sin.sin_port);
+    if (s_instance != NULL) {
+      mgos_dns_sd_add_service_instance(s_instance, "_http._tcp", s_port, txt);
+    }
   }
   free(extra_txt);
   free(txt);
+}
+
+static void mgos_http_server_publish(void *arg) {
+  mgos_http_server_publish_dns_sd();
   (void) arg;
 }
+
 #endif /* MGOS_HAVE_DNS_SD */
 
 bool mgos_http_server_init(void) {
