@@ -309,6 +309,8 @@ bool mgos_http_server_init(void) {
       mgos_sys_config_get_http_hidden_files();
   s_http_server_opts.auth_domain = mgos_sys_config_get_http_auth_domain();
   s_http_server_opts.global_auth_file = mgos_sys_config_get_http_auth_file();
+  s_http_server_opts.auth_algo =
+      (enum mg_auth_algo) mgos_sys_config_get_http_auth_algo();
   s_http_server_opts.extra_headers = mgos_sys_config_get_http_extra_headers();
 #endif
 
@@ -398,11 +400,12 @@ void mgos_register_http_endpoint_opt(const char *uri_path,
 
 void mgos_register_http_endpoint(const char *uri_path,
                                  mg_event_handler_t handler, void *user_data) {
-  struct mg_http_endpoint_opts opts;
-  memset(&opts, 0, sizeof(opts));
-  opts.user_data = user_data;
-  opts.auth_domain = mgos_sys_config_get_http_auth_domain();
-  opts.auth_file = mgos_sys_config_get_http_auth_file();
+  struct mg_http_endpoint_opts opts = {
+      .user_data = user_data,
+      .auth_domain = mgos_sys_config_get_http_auth_domain(),
+      .auth_file = mgos_sys_config_get_http_auth_file(),
+      .auth_algo = mgos_sys_config_get_http_auth_algo(),
+  };
   mgos_register_http_endpoint_opt(uri_path, handler, opts);
 }
 
