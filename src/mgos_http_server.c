@@ -404,7 +404,7 @@ void mgos_register_http_endpoint(const char *uri_path,
       .user_data = user_data,
       .auth_domain = mgos_sys_config_get_http_auth_domain(),
       .auth_file = mgos_sys_config_get_http_auth_file(),
-      .auth_algo = mgos_sys_config_get_http_auth_algo(),
+      .auth_algo = (enum mg_auth_algo) mgos_sys_config_get_http_auth_algo(),
   };
   mgos_register_http_endpoint_opt(uri_path, handler, opts);
 }
