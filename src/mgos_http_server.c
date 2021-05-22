@@ -212,8 +212,26 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
   (void) user_data;
 }
 
+static bool add_extra_txt(struct mgos_dns_sd_txt_entry **txt, int *n,
+                          const char *extra_txt, char **text_temp) {
+  *text_temp = strdup(extra_txt);
+  if (*text_temp == NULL) return false;
+  const char *p = *text_temp;
+  struct mg_str key, val;
+  while ((p = mg_next_comma_list_entry(p, &key, &val)) != NULL) {
+    ((char *) key.p)[key.len] = '\0';
+    ((char *) val.p)[val.len] = '\0';
+    *txt = realloc(*txt, ((*n) + 2) * sizeof(**txt));
+    if ((*txt) == NULL) return false;
+    (*txt)[*n].key = key.p;
+    (*txt)[*n].value = val;
+    (*n)++;
+  }
+  return true;
+}
+
 #ifdef MGOS_HAVE_DNS_SD
-void mgos_http_server_publish_dns_sd(void) {
+void mgos_http_server_publish_dns_sd(const char *extra_txt) {
   static char *s_instance = NULL;
   static uint16_t s_port = 0;
   int n = 0;
@@ -247,23 +265,17 @@ void mgos_http_server_publish_dns_sd(void) {
   txt[n++] = txt_fw_ver;
   txt[n++] = txt_fw_id;
 #endif
-  // Append extra labels from config.
-  char *extra_txt = NULL;
+
+  // Append extra labels from config and argument.
+  char *extra_txt_temp = NULL, *extra_txt_temp2 = NULL;
   if (mgos_sys_config_get_dns_sd_txt() != NULL) {
-    extra_txt = strdup(mgos_sys_config_get_dns_sd_txt());
-    const char *p = extra_txt;
-    struct mg_str key, val;
-    while ((p = mg_next_comma_list_entry(p, &key, &val)) != NULL) {
-      ((char *) key.p)[key.len] = '\0';
-      ((char *) val.p)[val.len] = '\0';
-      txt = realloc(txt, (n + 2) * sizeof(*txt));
-      if (txt == NULL) return;
-      txt[n].key = key.p;
-      txt[n].value = val;
-      n++;
-    }
+    add_extra_txt(&txt, &n, mgos_sys_config_get_dns_sd_txt(), &extra_txt_temp);
+  }
+  if (extra_txt != NULL) {
+    add_extra_txt(&txt, &n, extra_txt, &extra_txt_temp2);
   }
   if (txt != NULL) txt[n].key = NULL;
+
   // Remove existing endpoint, if any.
   if (s_instance != NULL) {
     mgos_dns_sd_remove_service_instance(s_instance, "_http._tcp", s_port);
@@ -281,15 +293,10 @@ void mgos_http_server_publish_dns_sd(void) {
       mgos_dns_sd_add_service_instance(s_instance, "_http._tcp", s_port, txt);
     }
   }
-  free(extra_txt);
+  free(extra_txt_temp);
+  free(extra_txt_temp2);
   free(txt);
 }
-
-static void mgos_http_server_publish(void *arg) {
-  mgos_http_server_publish_dns_sd();
-  (void) arg;
-}
-
 #endif /* MGOS_HAVE_DNS_SD */
 
 bool mgos_http_server_init(void) {
@@ -379,9 +386,7 @@ bool mgos_http_server_init(void) {
 #endif
 
 #ifdef MGOS_HAVE_DNS_SD
-  if (mgos_sys_config_get_dns_sd_enable()) {
-    mgos_invoke_cb(mgos_http_server_publish, NULL, false /* from_isr */);
-  }
+  mgos_http_server_publish_dns_sd(NULL /* extra_txt */);
 #endif
 
   return true;
