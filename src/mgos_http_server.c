@@ -212,6 +212,7 @@ static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
   (void) user_data;
 }
 
+#ifdef MGOS_HAVE_DNS_SD
 static bool add_extra_txt(struct mgos_dns_sd_txt_entry **txt, int *n,
                           const char *extra_txt, char **text_temp) {
   *text_temp = strdup(extra_txt);
@@ -230,7 +231,6 @@ static bool add_extra_txt(struct mgos_dns_sd_txt_entry **txt, int *n,
   return true;
 }
 
-#ifdef MGOS_HAVE_DNS_SD
 void mgos_http_server_publish_dns_sd(const char *extra_txt) {
   static char *s_instance = NULL;
   static uint16_t s_port = 0;
