@@ -29,6 +29,7 @@ cdefs:
 
 init_after:
   - atca
+  - dns-sd
   - ethernet
   - wifi
 
