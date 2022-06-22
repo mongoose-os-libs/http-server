@@ -421,3 +421,7 @@ struct mg_connection *mgos_get_sys_http_server(void) {
 void mgos_http_server_set_document_root(const char *document_root) {
   s_http_server_opts.document_root = document_root;
 }
+
+void mgos_http_server_set_extra_headers(const char *extra_headers) {
+  s_http_server_opts.extra_headers = extra_headers;
+}
